@@ -1,9 +1,4 @@
-<!doctype html>
-<html lang="vi">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Lớp HSK cô Chanie</title>
+<!doctype html><html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Lớp HSK cô Chanie</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <script>try{var t=localStorage.getItem("hsk-theme");if(t==="dark"||t==="light")document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -508,11 +503,7 @@ footer .wrap{padding-block:20px}
 .theme-paper .d-moon::after{content:"字"}
 #dTheme{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);color:#fff;border-radius:8px;padding:6px 8px;font:inherit;font-size:14px}
 #dTheme option{color:#111}
-</style>
-<style>:root{padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom)}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
-</head>
-<body>
-
+</style><style>[hidden]{display:none!important}</style></head><body>
 
 <header class="top">
   <div class="wrap">
@@ -558,7 +549,7 @@ footer .wrap{padding-block:20px}
     </div>
 
     <div class="section">
-      <div class="note">Tiến độ học được lưu riêng trên trình duyệt của từng học viên. Nếu đổi máy hoặc xoá dữ liệu trình duyệt, tiến độ sẽ bắt đầu lại.</div>
+      <div class="note">Học viên đăng nhập bằng tài khoản cô cấp để lưu tiến độ, điểm và xem bài về nhà trên mọi thiết bị. Nếu không đăng nhập, tiến độ chỉ lưu trên trình duyệt đang dùng.</div>
     </div>
   </section>
 
@@ -1674,6 +1665,311 @@ function hwAnimate(el){
 document.addEventListener("click",e=>{const b=e.target.closest("[data-hwanim]");if(!b)return;const bar=b.closest(".d-hwbar");let el=bar.previousElementSibling;while(el&&!el.classList.contains("d-hw"))el=el.previousElementSibling;if(el)hwAnimate(el)},true);
 route();
 </script>
+<style>
+.acct-btn{margin-left:4px}
+.acct-chip{display:flex;align-items:center;gap:8px;font-size:14px;color:var(--muted)}
+.acct-chip b{color:var(--ink)}
+.ac-ov{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:50;display:grid;place-items:center;padding:16px}
+.ac-box{background:var(--card);color:var(--ink);border:1px solid var(--line);border-radius:16px;padding:22px;width:min(420px,100%);max-height:90vh;overflow:auto}
+.ac-box.wide{width:min(720px,100%)}
+.ac-box h3{margin:0 0 6px;font-size:20px}
+.ac-f{display:flex;flex-direction:column;gap:4px;margin:10px 0}
+.ac-f label{font-size:14px;color:var(--muted);font-weight:600}
+.ac-f input,.ac-f select,.ac-f textarea,.ac-in{font:inherit;padding:9px 11px;border:1px solid var(--line);border-radius:9px;background:var(--paper);color:var(--ink);width:100%}
+.ac-err{color:var(--bad);font-size:14px;min-height:20px;margin:4px 0}
+.ac-ok{color:var(--good);font-size:14px}
+.ac-row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.ac-tabs{display:flex;gap:6px;margin:6px 0 16px;flex-wrap:wrap}
+.ac-tabs button{border:1px solid var(--line);background:var(--card);color:var(--muted);padding:7px 14px;border-radius:999px;font-weight:600}
+.ac-tabs button[aria-pressed="true"]{background:var(--jade-soft);color:var(--jade);border-color:var(--jade)}
+.ac-tbl{width:100%;border-collapse:collapse;font-size:15px}
+.ac-tbl th,.ac-tbl td{text-align:left;padding:9px 8px;border-bottom:1px solid var(--line);vertical-align:middle}
+.ac-tbl th{font-size:13px;color:var(--muted);font-weight:600}
+.ac-tbl td.num{font-variant-numeric:tabular-nums}
+.ac-card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px;margin-bottom:16px}
+.ac-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px}
+.ac-stat{background:var(--paper);border-radius:12px;padding:14px}
+.ac-stat b{display:block;font-size:26px;color:var(--jade);font-variant-numeric:tabular-nums}
+.ac-stat span{font-size:14px;color:var(--muted)}
+.ac-hw{display:flex;gap:12px;align-items:flex-start;padding:12px 0;border-bottom:1px solid var(--line)}
+.ac-hw:last-child{border-bottom:0}
+.ac-hw .t{font-weight:600}
+.ac-hw .s{font-size:14px;color:var(--muted)}
+.ac-hw.done .t{text-decoration:line-through;color:var(--muted)}
+.ac-pw{font-family:ui-monospace,monospace;background:var(--jade-soft);color:var(--jade);padding:2px 8px;border-radius:6px}
+.ac-scroll{overflow-x:auto}
+.lop-locked{opacity:.45}
+@media (max-width:640px){.ac-tbl .hide-sm{display:none}}
+</style>
 
-</body>
-</html>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.3/dist/umd/supabase.js"></script>
+<script>
+/* ===== TÀI KHOẢN (Supabase) ===== */
+const SB_URL="https://ipyrukdykyhlbdkgpqus.supabase.co";
+const SB_KEY="sb_publishable_D_0KivVjOQW7gKTVTOlqVA_rcoDwGdW";
+const MAIL_DOMAIN="@lophsk.app";
+const AC={sb:null,user:null,prof:null,cls:null,classes:[],tab:"hv"};
+try{AC.sb=window.supabase.createClient(SB_URL,SB_KEY,{auth:{persistSession:true,storageKey:"hsk-auth"}})}catch(e){}
+const isT=()=>AC.prof&&AC.prof.role==="teacher";
+const isS=()=>AC.prof&&AC.prof.role==="student";
+function normUser(s){return String(s||"").trim().toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/đ/g,"d").replace(/[^a-z0-9._]/g,"")}
+const toMail=u=>normUser(u)+MAIL_DOMAIN;
+function fmtDate(d){if(!d)return "—";const x=new Date(d);return x.toLocaleDateString("vi-VN",{day:"2-digit",month:"2-digit"})+" "+x.toLocaleTimeString("vi-VN",{hour:"2-digit",minute:"2-digit"})}
+function fmtDay(d){if(!d)return "";const x=new Date(d+"T00:00:00");return x.toLocaleDateString("vi-VN",{weekday:"short",day:"2-digit",month:"2-digit"})}
+function genPw(){return String(Math.floor(100000+Math.random()*900000))}
+function modal(html,wide){const o=document.createElement("div");o.className="ac-ov";o.innerHTML=`<div class="ac-box${wide?" wide":""}" role="dialog" aria-modal="true">${html}</div>`;
+  o.addEventListener("click",e=>{if(e.target===o||e.target.closest("[data-close]"))o.remove()});document.body.appendChild(o);const f=o.querySelector("input");if(f)f.focus();return o}
+
+/* --- header --- */
+VIEWS.push("tai-khoan");
+(function(){
+  const sec=document.createElement("section");sec.id="v-tai-khoan";sec.className="wrap";sec.hidden=true;sec.style.paddingBlock="28px";
+  document.querySelector("main").appendChild(sec);
+  const nav=document.querySelector("header nav");
+  const a=document.createElement("a");a.href="#tai-khoan";a.dataset.view="tai-khoan";a.id="acNav";a.hidden=true;nav.appendChild(a);
+  const box=document.createElement("div");box.id="acBox";box.className="acct-chip";
+  document.getElementById("themeBtn").before(box);
+})();
+function drawHeader(){
+  const a=document.getElementById("acNav"),box=document.getElementById("acBox");
+  if(!AC.sb){box.innerHTML="";return}
+  if(AC.prof){a.hidden=false;a.textContent=isT()?"Quản lý lớp":"Góc của em";
+    box.innerHTML=`<span>Chào <b>${esc(AC.prof.full_name||AC.prof.username)}</b></span><button class="btn small" id="acOut">Đăng xuất</button>`;
+    document.getElementById("acOut").onclick=logout;
+  }else{a.hidden=true;box.innerHTML=`<button class="btn small primary acct-btn" id="acIn">Đăng nhập</button>`;document.getElementById("acIn").onclick=loginDlg}
+}
+
+/* --- đăng nhập --- */
+async function loginDlg(){
+  const o=modal(`<h3>Đăng nhập</h3><p class="q" style="text-align:left;margin:0">Dùng tên đăng nhập và mật khẩu cô Chanie đã cấp.</p>
+   <form id="acF"><div class="ac-f"><label>Tên đăng nhập</label><input name="u" autocomplete="username" autocapitalize="none" required></div>
+   <div class="ac-f"><label>Mật khẩu</label><input name="p" type="password" autocomplete="current-password" required></div>
+   <div class="ac-err" id="acErr"></div>
+   <div class="ac-row"><button class="btn primary" type="submit">Đăng nhập</button><button class="btn" type="button" data-close>Huỷ</button></div></form>
+   <div id="acSetup"></div>`);
+  o.querySelector("#acF").onsubmit=async e=>{e.preventDefault();const f=e.target,err=o.querySelector("#acErr");err.textContent="Đang đăng nhập…";
+    const {error}=await AC.sb.auth.signInWithPassword({email:toMail(f.u.value),password:f.p.value});
+    if(error){err.textContent="Sai tên đăng nhập hoặc mật khẩu.";return}
+    o.remove();await afterLogin();location.hash="tai-khoan";route()};
+  try{const {data}=await AC.sb.rpc("has_teacher");if(data===false){
+    o.querySelector("#acSetup").innerHTML=`<hr style="border:0;border-top:1px solid var(--line);margin:16px 0"><b>Lần đầu sử dụng?</b><p class="q" style="text-align:left;margin:4px 0 8px">Trang chưa có tài khoản giáo viên. Cô Chanie bấm nút dưới để tạo tài khoản giáo viên.</p><button class="btn" id="acMkT">Tạo tài khoản giáo viên</button>`;
+    o.querySelector("#acMkT").onclick=()=>{o.remove();teacherSetup()}}}catch(e){}
+}
+function teacherSetup(){
+  const o=modal(`<h3>Tạo tài khoản giáo viên</h3><p class="q" style="text-align:left;margin:0">Tài khoản đầu tiên được tạo sẽ là tài khoản giáo viên. Chị ghi nhớ tên đăng nhập và mật khẩu này nhé.</p>
+   <form id="acF"><div class="ac-f"><label>Tên hiển thị</label><input name="n" value="Cô Chanie" required></div>
+   <div class="ac-f"><label>Tên đăng nhập (chữ không dấu, số)</label><input name="u" value="cochanie" autocapitalize="none" required></div>
+   <div class="ac-f"><label>Mật khẩu (ít nhất 6 ký tự)</label><input name="p" type="password" autocomplete="new-password" minlength="6" required></div>
+   <div class="ac-f"><label>Nhập lại mật khẩu</label><input name="p2" type="password" autocomplete="new-password" minlength="6" required></div>
+   <div class="ac-err" id="acErr"></div>
+   <div class="ac-row"><button class="btn primary" type="submit">Tạo tài khoản</button><button class="btn" type="button" data-close>Huỷ</button></div></form>`);
+  o.querySelector("#acF").onsubmit=async e=>{e.preventDefault();const f=e.target,err=o.querySelector("#acErr");
+    const u=normUser(f.u.value);if(u.length<3){err.textContent="Tên đăng nhập cần ít nhất 3 ký tự.";return}
+    if(f.p.value!==f.p2.value){err.textContent="Hai mật khẩu chưa giống nhau.";return}
+    err.textContent="Đang tạo…";
+    const {error}=await AC.sb.auth.signUp({email:toMail(u),password:f.p.value,options:{data:{username:u,full_name:f.n.value.trim()}}});
+    if(error){err.textContent="Không tạo được: "+error.message;return}
+    o.remove();await afterLogin();location.hash="tai-khoan";route()};
+}
+async function logout(){await AC.sb.auth.signOut();AC.user=AC.prof=AC.cls=null;
+  try{localStorage.removeItem("hsk-owner")}catch(e){}
+  known=new Set();_save("hsk3-known",[]);drawHeader();if(location.hash==="#tai-khoan")location.hash="gioi-thieu";else route()}
+
+async function afterLogin(){
+  const {data:{session}}=await AC.sb.auth.getSession();if(!session){AC.user=AC.prof=null;drawHeader();return}
+  AC.user=session.user;
+  const {data:p}=await AC.sb.from("profiles").select("*").eq("id",AC.user.id).single();AC.prof=p||null;
+  if(AC.prof&&AC.prof.class_id){const {data:c}=await AC.sb.from("classes").select("*").eq("id",AC.prof.class_id).single();AC.cls=c||null}else AC.cls=null;
+  AC.sb.rpc("touch_seen").then(()=>{},()=>{});
+  await pullKnown();drawHeader();
+}
+
+/* --- đồng bộ tiến độ thẻ từ --- */
+const _save=save;let _kt=null;
+save=function(k,v){_save(k,v);if(k==="hsk3-known"&&AC.user){clearTimeout(_kt);_kt=setTimeout(pushKnown,1500)}};
+async function pushKnown(){if(!AC.user)return;await AC.sb.from("progress").upsert({user_id:AC.user.id,key:"known",data:[...known],updated_at:new Date().toISOString()})}
+async function pullKnown(){
+  let owner=null;try{owner=localStorage.getItem("hsk-owner")}catch(e){}
+  const {data}=await AC.sb.from("progress").select("data").eq("user_id",AC.user.id).eq("key","known").maybeSingle();
+  const server=new Set((data&&data.data)||[]);
+  if(!owner||owner===AC.user.id){known.forEach(k=>server.add(k))}
+  known=server;_save("hsk3-known",[...known]);try{localStorage.setItem("hsk-owner",AC.user.id)}catch(e){}
+  pushKnown();
+}
+
+/* --- ghi điểm trắc nghiệm --- */
+const _drawQuiz=drawQuiz;
+drawQuiz=function(){_drawQuiz();const s=session;if(!s||s.type!=="quiz"||s.qs[s.i]||s.sent||!AC.user)return;s.sent=true;
+  const L=lvl();const part=st.pLesson==="all"?"tất cả bài":"bài "+(+st.pLesson+1);
+  const kind=(st.mode==="listen"?"Nghe chọn chữ":"Trắc nghiệm")+" · "+L.name+" · "+part;
+  AC.sb.from("results").insert({user_id:AC.user.id,kind,score:s.right,total:s.qs.length}).then(()=>{})};
+
+/* --- khoá bài theo tiến độ lớp (học viên) --- */
+const openUpto=()=>isS()?(AC.cls?AC.cls.open_upto:0):999;
+const _renderLop=renderLop;
+renderLop=function(){
+  if(isS()){const C=curCourse();const ok=C.lessons.filter(l=>l.n<=openUpto());if(lopLesson>openUpto()&&ok.length)lopLesson=ok[ok.length-1].n}
+  _renderLop();
+  if(!isS())return;
+  document.querySelectorAll("#lopRail [data-lop]").forEach(b=>{if(+b.dataset.lop>openUpto()){b.classList.add("lop-locked");b.title="Cô chưa mở bài này"}});
+  if(lopLesson>openUpto())$("#lopMain").innerHTML=`<h2>Cô chưa mở bài này</h2><p class="q" style="text-align:left">${AC.cls?`Lớp của em đang học đến Bài ${AC.cls.open_upto}.`:"Em chưa được xếp lớp. Em nhắn cô Chanie nhé."}</p>`;
+};
+document.addEventListener("click",e=>{const b=e.target.closest("#lopRail [data-lop]");if(b&&isS()&&+b.dataset.lop>openUpto()){e.stopImmediatePropagation();e.preventDefault();
+  modal(`<h3>Cô chưa mở bài này</h3><p>${AC.cls?`Lớp của em đang học đến Bài ${AC.cls.open_upto}.`:"Em chưa được xếp lớp."}</p><button class="btn primary" data-close>Đã hiểu</button>`)}},true);
+
+/* --- trang tài khoản --- */
+const _render=render;
+render=function(){_render();if(st.view==="tai-khoan")renderAcct()};
+function renderAcct(){
+  const v=$("#v-tai-khoan");
+  if(!AC.prof){v.innerHTML=`<h2>Tài khoản</h2><p>Em đăng nhập để lưu tiến độ học và xem bài về nhà nhé.</p><button class="btn primary" onclick="loginDlg()">Đăng nhập</button>`;return}
+  if(isT())renderTeacher(v);else renderStudent(v);
+}
+
+/* ===== GÓC HỌC VIÊN ===== */
+async function renderStudent(v){
+  v.innerHTML=`<p>Đang tải…</p>`;
+  const [hw,res,prog]=await Promise.all([
+    AC.prof.class_id?AC.sb.from("assignments").select("*").eq("class_id",AC.prof.class_id).order("created_at",{ascending:false}):{data:[]},
+    AC.sb.from("results").select("*").eq("user_id",AC.user.id).order("created_at",{ascending:false}).limit(15),
+    AC.sb.from("progress").select("key,data").eq("user_id",AC.user.id).like("key","hw-%")]);
+  const done=new Set((prog.data||[]).map(p=>p.key));
+  const words=LEVELS.map(L=>{const ws=allWords(L);return [L.name,ws.filter(w=>known.has(w.key)).length,ws.length]});
+  const R=res.data||[];const avg=R.length?Math.round(R.reduce((a,r)=>a+r.score/r.total,0)/R.length*100):null;
+  v.innerHTML=`<h2>Góc của ${esc(AC.prof.full_name||AC.prof.username)}</h2>
+  <p class="q" style="text-align:left">${AC.cls?`Lớp <b>${esc(AC.cls.name)}</b> · cô đã mở đến <b>Bài ${AC.cls.open_upto}</b>`:"Em chưa được xếp lớp."}</p>
+  <div class="ac-grid" style="margin-bottom:16px">
+   ${words.map(w=>`<div class="ac-stat"><b>${w[1]}/${w[2]}</b><span>Từ đã nhớ · ${w[0]}</span></div>`).join("")}
+   <div class="ac-stat"><b>${avg===null?"—":avg+"%"}</b><span>Điểm trắc nghiệm trung bình</span></div>
+  </div>
+  <div class="ac-card"><h3 style="margin-top:0">Bài về nhà</h3>
+   ${(hw.data||[]).length?(hw.data).map(h=>`<label class="ac-hw ${done.has("hw-"+h.id)?"done":""}"><input type="checkbox" data-hw="${h.id}" ${done.has("hw-"+h.id)?"checked":""} style="margin-top:4px;width:18px;height:18px">
+     <div><div class="t">${esc(h.title)}</div><div class="s">${h.lesson?"Bài "+h.lesson+" · ":""}${h.due?"Hạn: "+fmtDay(h.due):"Không có hạn"}</div>${h.note?`<div style="margin-top:4px;white-space:pre-wrap">${esc(h.note)}</div>`:""}</div></label>`).join(""):`<p class="q" style="text-align:left">Chưa có bài về nhà.</p>`}
+  </div>
+  <div class="ac-card"><h3 style="margin-top:0">Kết quả gần đây</h3>
+   ${R.length?`<table class="ac-tbl"><thead><tr><th>Bài làm</th><th>Điểm</th><th>Lúc</th></tr></thead><tbody>${R.map(r=>`<tr><td>${esc(r.kind)}</td><td class="num">${r.score}/${r.total}</td><td class="num">${fmtDate(r.created_at)}</td></tr>`).join("")}</tbody></table>`:`<p class="q" style="text-align:left">Em vào phần <a href="#on-luyen">Ôn luyện</a> làm trắc nghiệm, điểm sẽ được lưu ở đây.</p>`}
+  </div>
+  <div class="btns"><a class="btn primary" href="#on-luyen">Ôn luyện ngay</a><a class="btn" href="#lop-hoc">Xem bài học</a></div>`;
+  v.querySelectorAll("[data-hw]").forEach(c=>c.onchange=async()=>{const key="hw-"+c.dataset.hw;
+    c.closest(".ac-hw").classList.toggle("done",c.checked);
+    if(c.checked)await AC.sb.from("progress").upsert({user_id:AC.user.id,key,data:{done:true},updated_at:new Date().toISOString()});
+    else await AC.sb.from("progress").delete().eq("user_id",AC.user.id).eq("key",key)});
+}
+
+/* ===== QUẢN LÝ LỚP (GIÁO VIÊN) ===== */
+async function loadT(){
+  const [c,p,pr,r,a]=await Promise.all([
+    AC.sb.from("classes").select("*").order("id"),
+    AC.sb.from("profiles").select("*").eq("role","student").order("full_name"),
+    AC.sb.from("progress").select("user_id,key,data"),
+    AC.sb.from("results").select("*").order("created_at",{ascending:false}).limit(1000),
+    AC.sb.from("assignments").select("*").order("created_at",{ascending:false})]);
+  AC.classes=c.data||[];
+  return {students:p.data||[],progress:pr.data||[],results:r.data||[],assign:a.data||[]};
+}
+const clsName=id=>{const c=AC.classes.find(c=>c.id===id);return c?c.name:"Chưa xếp lớp"};
+const clsOpts=(sel,none)=>(none?`<option value="">Chưa xếp lớp</option>`:"")+AC.classes.map(c=>`<option value="${c.id}" ${c.id===sel?"selected":""}>${esc(c.name)}</option>`).join("");
+const lessonOpts=sel=>{let s="";for(let n=1;n<=30;n++)s+=`<option value="${n}" ${n===sel?"selected":""}>Bài ${n}${n===15?" (hết Quyển 1)":""}</option>`;return s};
+async function renderTeacher(v){
+  v.innerHTML=`<p>Đang tải…</p>`;
+  const D=await loadT();AC.D=D;
+  const tabs=[["hv","Học viên ("+D.students.length+")"],["bt","Bài về nhà"],["lop","Lớp học"]];
+  v.innerHTML=`<h2>Quản lý lớp</h2>
+   <div class="ac-tabs">${tabs.map(t=>`<button data-actab="${t[0]}" aria-pressed="${AC.tab===t[0]}">${t[1]}</button>`).join("")}</div><div id="acT"></div>`;
+  v.querySelectorAll("[data-actab]").forEach(b=>b.onclick=()=>{AC.tab=b.dataset.actab;renderTeacher(v)});
+  const box=v.querySelector("#acT");
+  if(AC.tab==="hv")tStudents(box,D);else if(AC.tab==="bt")tHomework(box,D);else tClasses(box,D);
+}
+function knownOf(D,uid){const p=D.progress.find(x=>x.user_id===uid&&x.key==="known");return p&&Array.isArray(p.data)?p.data.length:0}
+function tStudents(box,D){
+  box.innerHTML=`<div class="ac-row" style="margin-bottom:12px"><button class="btn primary" id="acAdd">+ Thêm học viên</button>
+    <select class="ac-in" id="acFil" style="width:auto"><option value="">Tất cả lớp</option>${clsOpts(+AC.fil||null,false)}<option value="0">Chưa xếp lớp</option></select></div>
+   <div class="ac-card ac-scroll" style="padding:6px 12px">${D.students.length?`<table class="ac-tbl"><thead><tr><th>Học viên</th><th>Lớp</th><th class="hide-sm">Vào gần nhất</th><th>Từ đã nhớ</th><th>Điểm TB</th><th></th></tr></thead><tbody>
+   ${D.students.filter(s=>!AC.fil?true:AC.fil==="0"?!s.class_id:s.class_id===+AC.fil).map(s=>{const R=D.results.filter(r=>r.user_id===s.id).slice(0,10);const avg=R.length?Math.round(R.reduce((a,r)=>a+r.score/r.total,0)/R.length*100)+"%":"—";
+     return `<tr><td><b>${esc(s.full_name||s.username)}</b><div class="s" style="font-size:13px;color:var(--muted)">${esc(s.username)}</div></td><td>${esc(clsName(s.class_id))}</td><td class="num hide-sm">${fmtDate(s.last_seen)}</td><td class="num">${knownOf(D,s.id)}</td><td class="num">${avg}</td>
+     <td><button class="btn small" data-stu="${s.id}">Chi tiết</button></td></tr>`}).join("")}</tbody></table>`:`<p class="q" style="text-align:left;padding:10px">Chưa có học viên. Chị bấm “Thêm học viên” để cấp tài khoản.</p>`}</div>`;
+  box.querySelector("#acAdd").onclick=addStudent;
+  box.querySelector("#acFil").value=AC.fil||"";
+  box.querySelector("#acFil").onchange=e=>{AC.fil=e.target.value;tStudents(box,D)};
+  box.querySelectorAll("[data-stu]").forEach(b=>b.onclick=()=>stuDetail(D.students.find(s=>s.id===b.dataset.stu),D));
+}
+function addStudent(){
+  const pw=genPw();
+  const o=modal(`<h3>Thêm học viên</h3>
+   <form id="acF"><div class="ac-f"><label>Họ tên</label><input name="n" required></div>
+   <div class="ac-f"><label>Tên đăng nhập (tự gợi ý, chị sửa được)</label><input name="u" autocapitalize="none" required></div>
+   <div class="ac-f"><label>Mật khẩu</label><input name="p" value="${pw}" minlength="6" required></div>
+   <div class="ac-f"><label>Lớp</label><select name="c">${clsOpts(AC.classes[0]&&AC.classes[0].id,true)}</select></div>
+   <div class="ac-err" id="acErr"></div>
+   <div class="ac-row"><button class="btn primary" type="submit">Tạo tài khoản</button><button class="btn" type="button" data-close>Đóng</button></div></form>`);
+  const f=o.querySelector("#acF");let touched=false;
+  f.u.oninput=()=>touched=true;
+  f.n.oninput=()=>{if(touched)return;const w=normUser(f.n.value.replace(/\s+/g," ").split(" ").reverse().join(""));f.u.value=w};
+  f.onsubmit=async e=>{e.preventDefault();const err=o.querySelector("#acErr");const u=normUser(f.u.value);
+    if(u.length<3){err.textContent="Tên đăng nhập cần ít nhất 3 ký tự (chữ không dấu, số).";return}
+    err.textContent="Đang tạo…";
+    const tmp=window.supabase.createClient(SB_URL,SB_KEY,{auth:{persistSession:false,autoRefreshToken:false,storageKey:"hsk-tmp"}});
+    const {error}=await tmp.auth.signUp({email:toMail(u),password:f.p.value,options:{data:{username:u,full_name:f.n.value.trim(),class_id:f.c.value}}});
+    if(error){err.textContent=/registered|exists/i.test(error.message)?"Tên đăng nhập này đã có người dùng, chị đổi tên khác nhé.":"Không tạo được: "+error.message;return}
+    o.querySelector(".ac-box").innerHTML=`<h3>Đã tạo tài khoản ✅</h3><p>Chị gửi cho học viên:</p>
+      <div class="ac-card"><div>Trang web: <b>hsk-web-blond.vercel.app</b></div><div>Tên đăng nhập: <span class="ac-pw">${esc(u)}</span></div><div>Mật khẩu: <span class="ac-pw">${esc(f.p.value)}</span></div></div>
+      <div class="ac-row"><button class="btn primary" id="acMore">Thêm học viên khác</button><button class="btn" data-close>Xong</button></div>`;
+    o.querySelector("#acMore").onclick=()=>{o.remove();addStudent()};
+    o.addEventListener("click",e=>{if(e.target.closest("[data-close]")||e.target===o)renderAcct()});
+  };
+}
+function stuDetail(s,D){
+  const R=D.results.filter(r=>r.user_id===s.id).slice(0,20);
+  const hw=D.assign.filter(a=>a.class_id===s.class_id);
+  const done=new Set(D.progress.filter(p=>p.user_id===s.id&&p.key.startsWith("hw-")).map(p=>p.key));
+  const o=modal(`<h3>${esc(s.full_name||s.username)}</h3><p class="q" style="text-align:left;margin:0 0 10px">Tên đăng nhập: <span class="ac-pw">${esc(s.username)}</span> · Vào gần nhất: ${fmtDate(s.last_seen)}</p>
+   <div class="ac-f"><label>Họ tên</label><input id="sdN" value="${esc(s.full_name||"")}"></div>
+   <div class="ac-f"><label>Lớp</label><select id="sdC">${clsOpts(s.class_id,true)}</select></div>
+   <div class="ac-row" style="margin-bottom:14px"><button class="btn small primary" id="sdSave">Lưu</button><button class="btn small" id="sdPw">Đặt lại mật khẩu</button><button class="btn small" id="sdDel" style="color:var(--bad)">Xoá học viên</button><span id="sdMsg" class="ac-ok"></span></div>
+   <b>Bài về nhà</b>
+   <div style="margin:6px 0 14px">${hw.length?hw.map(h=>`<div>${done.has("hw-"+h.id)?"✅":"⬜"} ${esc(h.title)}</div>`).join(""):`<span class="q">Lớp chưa có bài về nhà.</span>`}</div>
+   <b>Kết quả gần đây</b>
+   ${R.length?`<table class="ac-tbl"><tbody>${R.map(r=>`<tr><td>${esc(r.kind)}</td><td class="num">${r.score}/${r.total}</td><td class="num">${fmtDate(r.created_at)}</td></tr>`).join("")}</tbody></table>`:`<p class="q" style="text-align:left">Chưa làm bài nào.</p>`}
+   <div class="ac-row" style="margin-top:14px"><button class="btn" data-close>Đóng</button></div>`,true);
+  const msg=o.querySelector("#sdMsg");
+  o.querySelector("#sdSave").onclick=async()=>{const {error}=await AC.sb.from("profiles").update({full_name:o.querySelector("#sdN").value.trim(),class_id:+o.querySelector("#sdC").value||null}).eq("id",s.id);
+    msg.textContent=error?"Lỗi: "+error.message:"Đã lưu";if(!error)o.addEventListener("click",e=>{if(e.target.closest("[data-close]")||e.target===o)renderAcct()})};
+  o.querySelector("#sdPw").onclick=async()=>{const pw=prompt("Mật khẩu mới cho "+(s.full_name||s.username)+" (ít nhất 6 ký tự):",genPw());if(!pw)return;
+    const {error}=await AC.sb.rpc("teacher_set_password",{uid:s.id,pw});msg.innerHTML=error?"Lỗi: "+esc(error.message):`Mật khẩu mới: <span class="ac-pw">${esc(pw)}</span>`};
+  o.querySelector("#sdDel").onclick=async()=>{if(!confirm("Xoá hẳn tài khoản "+(s.full_name||s.username)+" và toàn bộ điểm, tiến độ? Không khôi phục được."))return;
+    const {error}=await AC.sb.rpc("teacher_delete_student",{uid:s.id});if(error){msg.textContent="Lỗi: "+error.message;return}o.remove();renderAcct()};
+}
+function tHomework(box,D){
+  box.innerHTML=`<div class="ac-card"><h3 style="margin-top:0">Giao bài mới</h3>
+   <form id="hwF"><div class="ac-grid"><div class="ac-f"><label>Lớp</label><select name="c">${clsOpts(AC.classes[0]&&AC.classes[0].id)}</select></div>
+    <div class="ac-f"><label>Bài</label><select name="l"><option value="">—</option>${lessonOpts(AC.classes[0]&&AC.classes[0].open_upto)}</select></div>
+    <div class="ac-f"><label>Hạn nộp</label><input type="date" name="d"></div></div>
+   <div class="ac-f"><label>Tiêu đề</label><input name="t" required placeholder="VD: Dịch hội thoại Bài 18, thu âm gửi Fanpage"></div>
+   <div class="ac-f"><label>Ghi chú (tuỳ chọn)</label><textarea name="n" rows="2"></textarea></div>
+   <div class="ac-row"><button class="btn primary" type="submit">Giao bài</button><span class="ac-err" id="hwErr"></span></div></form></div>
+   <div class="ac-card" style="padding:6px 12px">${D.assign.length?`<table class="ac-tbl"><thead><tr><th>Bài về nhà</th><th>Lớp</th><th>Hạn</th><th>Đã làm</th><th></th></tr></thead><tbody>
+   ${D.assign.map(a=>{const ss=D.students.filter(s=>s.class_id===a.class_id);const n=ss.filter(s=>D.progress.some(p=>p.user_id===s.id&&p.key==="hw-"+a.id)).length;
+     return `<tr><td><b>${esc(a.title)}</b>${a.lesson?`<div style="font-size:13px;color:var(--muted)">Bài ${a.lesson}</div>`:""}</td><td>${esc(clsName(a.class_id))}</td><td class="num">${a.due?fmtDay(a.due):"—"}</td><td class="num">${n}/${ss.length}</td><td><button class="btn small" data-hwdel="${a.id}">Xoá</button></td></tr>`}).join("")}</tbody></table>`:`<p class="q" style="text-align:left;padding:10px">Chưa giao bài nào.</p>`}</div>`;
+  const f=box.querySelector("#hwF");
+  f.onsubmit=async e=>{e.preventDefault();const {error}=await AC.sb.from("assignments").insert({class_id:+f.c.value,lesson:+f.l.value||null,title:f.t.value.trim(),note:f.n.value.trim()||null,due:f.d.value||null});
+    if(error){box.querySelector("#hwErr").textContent="Lỗi: "+error.message;return}renderAcct()};
+  box.querySelectorAll("[data-hwdel]").forEach(b=>b.onclick=async()=>{if(!confirm("Xoá bài về nhà này?"))return;await AC.sb.from("assignments").delete().eq("id",+b.dataset.hwdel);renderAcct()});
+}
+function tClasses(box,D){
+  box.innerHTML=`<div class="ac-card" style="padding:6px 12px"><table class="ac-tbl"><thead><tr><th>Tên lớp</th><th>Mở bài đến</th><th>Học viên</th><th></th></tr></thead><tbody>
+   ${AC.classes.map(c=>`<tr><td><input class="ac-in" data-cn="${c.id}" value="${esc(c.name)}"></td><td><select class="ac-in" data-co="${c.id}">${lessonOpts(c.open_upto)}</select></td><td class="num">${D.students.filter(s=>s.class_id===c.id).length}</td><td><button class="btn small primary" data-csave="${c.id}">Lưu</button></td></tr>`).join("")}
+   </tbody></table></div>
+   <div class="ac-row"><input class="ac-in" id="cNew" placeholder="Tên lớp mới, VD: Lớp HSK 2 tối thứ 3" style="max-width:340px"><button class="btn" id="cAdd">+ Thêm lớp</button><span id="cMsg" class="ac-ok"></span></div>
+   <p class="q" style="text-align:left;margin-top:14px">“Mở bài đến”: học viên trong lớp chỉ mở được các bài từ 1 đến số này trong mục Bài học trên lớp. Bài 1–15 là Quyển 1, Bài 16–30 là HSK 2.</p>`;
+  box.querySelectorAll("[data-csave]").forEach(b=>b.onclick=async()=>{const id=+b.dataset.csave;
+    const {error}=await AC.sb.from("classes").update({name:box.querySelector(`[data-cn="${id}"]`).value.trim(),open_upto:+box.querySelector(`[data-co="${id}"]`).value}).eq("id",id);
+    box.querySelector("#cMsg").textContent=error?"Lỗi: "+error.message:"Đã lưu"});
+  box.querySelector("#cAdd").onclick=async()=>{const n=box.querySelector("#cNew").value.trim();if(!n)return;await AC.sb.from("classes").insert({name:n});renderAcct()};
+}
+
+/* --- khởi động --- */
+drawHeader();
+if(AC.sb){afterLogin().then(()=>{if(location.hash==="#tai-khoan")route();else if(st.view==="lop-hoc")render()});
+  AC.sb.auth.onAuthStateChange((ev)=>{if(ev==="SIGNED_OUT"){AC.user=AC.prof=null;drawHeader()}})}
+</script>
+</body></html>
