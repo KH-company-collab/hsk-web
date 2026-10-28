@@ -549,7 +549,7 @@ footer .wrap{padding-block:20px}
     </div>
 
     <div class="section">
-      <div class="note">Học viên đăng nhập bằng tài khoản cô cấp để lưu tiến độ, điểm và xem bài về nhà trên mọi thiết bị. Nếu không đăng nhập, tiến độ chỉ lưu trên trình duyệt đang dùng.</div>
+      <div class="note">Học viên đăng nhập bằng tài khoản cô cấp để lưu tiến độ, điểm và xem bài về nhà trên mọi thiết bị.</div>
     </div>
   </section>
 
@@ -1699,6 +1699,10 @@ route();
 .ac-pw{font-family:ui-monospace,monospace;background:var(--jade-soft);color:var(--jade);padding:2px 8px;border-radius:6px}
 .ac-scroll{overflow-x:auto}
 .lop-locked{opacity:.45}
+body:not(.ac-ok) main,body:not(.ac-ok) footer,body:not(.ac-ok) header nav{display:none!important}
+body.ac-ok #acGate{display:none}
+#acGate{min-height:70vh;display:grid;place-items:center;padding:32px 16px}
+#acGate .ac-box{box-shadow:0 10px 40px rgba(0,0,0,.08)}
 @media (max-width:640px){.ac-tbl .hide-sm{display:none}}
 </style>
 
@@ -1729,14 +1733,34 @@ VIEWS.push("tai-khoan");
   const a=document.createElement("a");a.href="#tai-khoan";a.dataset.view="tai-khoan";a.id="acNav";a.hidden=true;nav.appendChild(a);
   const box=document.createElement("div");box.id="acBox";box.className="acct-chip";
   document.getElementById("themeBtn").before(box);
+  const g=document.createElement("div");g.id="acGate";g.innerHTML=`<div class="ac-box"><div style="text-align:center;margin-bottom:8px"><span class="seal" style="display:inline-grid;width:52px;height:52px;font-size:28px">汉</span></div>
+   <h3 style="text-align:center">Lớp HSK cô Chanie</h3><p class="q" style="margin:0 0 6px">Trang dành riêng cho học viên của cô Chanie.<br>Em đăng nhập bằng tài khoản cô đã cấp nhé.</p><div id="acGateBody"><p class="q">Đang tải…</p></div></div>`;
+  document.querySelector("header").after(g);
 })();
+function canView(){return isT()||(isS()&&!!AC.prof.class_id)}
+function drawGate(){
+  document.body.classList.toggle("ac-ok",canView());
+  const gb=document.getElementById("acGateBody");if(canView()||!gb)return;
+  if(!AC.sb){gb.innerHTML=`<p class="ac-err">Không tải được phần đăng nhập. Em kiểm tra mạng rồi tải lại trang nhé.</p>`;return}
+  if(AC.prof&&isS()){gb.innerHTML=`<p>Tài khoản <b>${esc(AC.prof.username)}</b> chưa được cô xếp lớp. Em nhắn cô Chanie nhé.</p><button class="btn" id="acOut2">Đăng xuất</button>`;document.getElementById("acOut2").onclick=logout;return}
+  gb.innerHTML=`<form id="acGF"><div class="ac-f"><label>Tên đăng nhập</label><input name="u" autocomplete="username" autocapitalize="none" required></div>
+   <div class="ac-f"><label>Mật khẩu</label><input name="p" type="password" autocomplete="current-password" required></div>
+   <div class="ac-err" id="acGErr"></div><button class="btn primary" type="submit" style="width:100%;justify-content:center">Đăng nhập</button></form><div id="acGSetup"></div>`;
+  const f=document.getElementById("acGF");
+  f.onsubmit=async e=>{e.preventDefault();const err=document.getElementById("acGErr");err.textContent="Đang đăng nhập…";
+    const {error}=await AC.sb.auth.signInWithPassword({email:toMail(f.u.value),password:f.p.value});
+    if(error){err.textContent="Sai tên đăng nhập hoặc mật khẩu.";return}
+    err.textContent="";await afterLogin();route()};
+  AC.sb.rpc("has_teacher").then(({data})=>{if(data===false){const x=document.getElementById("acGSetup");if(x){x.innerHTML=`<hr style="border:0;border-top:1px solid var(--line);margin:16px 0"><button class="btn" id="acMkT2">Lần đầu dùng: tạo tài khoản giáo viên</button>`;document.getElementById("acMkT2").onclick=teacherSetup}}},()=>{});
+}
 function drawHeader(){
   const a=document.getElementById("acNav"),box=document.getElementById("acBox");
+  drawGate();
   if(!AC.sb){box.innerHTML="";return}
   if(AC.prof){a.hidden=false;a.textContent=isT()?"Quản lý lớp":"Góc của em";
-    box.innerHTML=`<span>Chào <b>${esc(AC.prof.full_name||AC.prof.username)}</b></span><button class="btn small" id="acOut">Đăng xuất</button>`;
+    box.innerHTML=`<span class="hide-sm">Chào <b>${esc(AC.prof.full_name||AC.prof.username)}</b></span><button class="btn small" id="acOut">Đăng xuất</button>`;
     document.getElementById("acOut").onclick=logout;
-  }else{a.hidden=true;box.innerHTML=`<button class="btn small primary acct-btn" id="acIn">Đăng nhập</button>`;document.getElementById("acIn").onclick=loginDlg}
+  }else{a.hidden=true;box.innerHTML=""}
 }
 
 /* --- đăng nhập --- */
@@ -1773,7 +1797,7 @@ function teacherSetup(){
 }
 async function logout(){await AC.sb.auth.signOut();AC.user=AC.prof=AC.cls=null;
   try{localStorage.removeItem("hsk-owner")}catch(e){}
-  known=new Set();_save("hsk3-known",[]);drawHeader();if(location.hash==="#tai-khoan")location.hash="gioi-thieu";else route()}
+  known=new Set();_save("hsk3-known",[]);drawHeader();location.hash="gioi-thieu";route()}
 
 async function afterLogin(){
   const {data:{session}}=await AC.sb.auth.getSession();if(!session){AC.user=AC.prof=null;drawHeader();return}
@@ -1909,7 +1933,8 @@ function addStudent(){
     if(u.length<3){err.textContent="Tên đăng nhập cần ít nhất 3 ký tự (chữ không dấu, số).";return}
     err.textContent="Đang tạo…";
     const tmp=window.supabase.createClient(SB_URL,SB_KEY,{auth:{persistSession:false,autoRefreshToken:false,storageKey:"hsk-tmp"}});
-    const {error}=await tmp.auth.signUp({email:toMail(u),password:f.p.value,options:{data:{username:u,full_name:f.n.value.trim(),class_id:f.c.value}}});
+    const {data:su,error}=await tmp.auth.signUp({email:toMail(u),password:f.p.value,options:{data:{username:u,full_name:f.n.value.trim()}}});
+    if(!error&&su&&su.user&&f.c.value)await AC.sb.from("profiles").update({class_id:+f.c.value}).eq("id",su.user.id);
     if(error){err.textContent=/registered|exists/i.test(error.message)?"Tên đăng nhập này đã có người dùng, chị đổi tên khác nhé.":"Không tạo được: "+error.message;return}
     o.querySelector(".ac-box").innerHTML=`<h3>Đã tạo tài khoản ✅</h3><p>Chị gửi cho học viên:</p>
       <div class="ac-card"><div>Trang web: <b>hsk-web-blond.vercel.app</b></div><div>Tên đăng nhập: <span class="ac-pw">${esc(u)}</span></div><div>Mật khẩu: <span class="ac-pw">${esc(f.p.value)}</span></div></div>
@@ -1969,7 +1994,7 @@ function tClasses(box,D){
 
 /* --- khởi động --- */
 drawHeader();
-if(AC.sb){afterLogin().then(()=>{if(location.hash==="#tai-khoan")route();else if(st.view==="lop-hoc")render()});
+if(AC.sb){afterLogin().then(()=>{if(location.hash==="#tai-khoan")route();else render()},()=>drawHeader());
   AC.sb.auth.onAuthStateChange((ev)=>{if(ev==="SIGNED_OUT"){AC.user=AC.prof=null;drawHeader()}})}
 </script>
 </body></html>
