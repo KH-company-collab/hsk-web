@@ -409,6 +409,24 @@ body,.top,.lesson,.level-card,.vcard,.stage{transition:background-color .25s,col
 .d-writeq .d-right{gap:20px}
 .d-wheel .d-h{font-size:34px;display:flex;flex-direction:column;gap:6px}
 .d-wheel .d-hint{margin-left:0}
+
+/* bút viết trên slide */
+#dInk{position:absolute;inset:0;width:100%;height:100%;z-index:4;pointer-events:none;touch-action:none}
+#deck.inking #dInk{pointer-events:auto;cursor:crosshair}
+.d-board{position:absolute;left:50%;top:50%;width:1280px;height:720px;transform-origin:center;z-index:3;background:#fffdf6}
+.d-board.grid{background-color:#fffdf6;background-image:
+  linear-gradient(#e8b4ad 2px,transparent 2px),linear-gradient(90deg,#e8b4ad 2px,transparent 2px),
+  linear-gradient(rgba(232,180,173,.45) 1px,transparent 1px),linear-gradient(90deg,rgba(232,180,173,.45) 1px,transparent 1px);
+  background-size:160px 160px,160px 160px,80px 80px,80px 80px;background-position:0 0,0 0,0 0,0 0}
+.d-tools{position:absolute;left:50%;top:max(8px,env(safe-area-inset-top,0px));transform:translateX(-50%);z-index:6;display:flex;flex-direction:row;flex-wrap:wrap;justify-content:center;align-items:center;max-width:calc(100% - 20px);gap:6px;background:rgba(18,6,5,.88);padding:8px;border-radius:14px;box-shadow:0 8px 30px rgba(0,0,0,.4)}
+.d-tools button{width:40px;height:40px;border-radius:10px;border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.06);color:#fff;font-size:18px;display:grid;place-items:center;padding:0}
+.d-tools button.on{background:#ffd25e;color:#5a1208;border-color:#ffd25e}
+.d-tools button.sw{background:var(--sw);border:3px solid rgba(255,255,255,.25)}
+.d-tools button.sw.on{border-color:#fff;box-shadow:0 0 0 2px #ffd25e}
+.d-tools button i{display:block;border-radius:50%;background:currentColor}
+.d-tsep{width:1px;height:28px;background:rgba(255,255,255,.2);margin:0 2px}
+#dPen.on{background:#ffd25e;color:#5a1208;border-color:#ffd25e}
+@media (max-height:640px){.d-tools{gap:3px;padding:5px}.d-tools button{width:32px;height:32px;font-size:15px}}
 footer{border-top:1px solid var(--line);color:var(--muted);font-size:14px}
 footer .wrap{padding-block:20px}
 
@@ -544,12 +562,13 @@ footer .wrap{padding-block:20px}
 
 <div id="wModal" class="w-modal" hidden><div class="w-panel"><div class="w-head"><span>Luyện viết: <b id="wWord" class="han"></b></span><button class="btn small" id="wClose">Đóng</button></div><div id="wBox" class="w-box"></div><div class="row"><button class="btn primary" id="wAnim">▶ Xem nét</button><button class="btn" id="wTrace">Viết mờ</button><button class="btn" id="wSelf">Tự viết</button></div><div id="wFb" class="w-fb"></div><p class="q" style="margin:0">Dữ liệu nét chữ: Make Me a Hanzi / Arphic PL</p></div></div>
 <div id="deck" hidden>
-  <div class="d-viewport"><div id="dStage" class="d-stage"></div></div>
+  <div class="d-viewport"><div id="dStage" class="d-stage"></div><div id="dBoard" class="d-board grid" hidden></div><canvas id="dInk"></canvas><div id="dTools" class="d-tools" hidden></div></div>
   <div id="dWrite" class="d-wover" hidden><div class="d-wpanel"><div id="dWBox" class="w-box"></div><div class="d-wbtns"><button id="dwAnim">▶ Xem nét</button><button id="dwTrace">Viết mờ</button><button id="dwSelf">Tự viết</button><button id="dwClose">Đóng</button></div><div id="dwFb" class="w-fb"></div></div></div>
   <div class="d-ctrl">
     <button id="dPrev" aria-label="Lùi lại">‹</button>
     <span id="dCount"></span>
     <button id="dNext" aria-label="Tiếp theo">›</button>
+    <button id="dPen">✏️ Viết (P)</button>
     <button id="dAuto" aria-pressed="true">Tự đọc: Bật</button>
     <select id="dTheme" aria-label="Giao diện slide"></select>
     <button id="dFull">Toàn màn hình</button>
@@ -1358,14 +1377,14 @@ function drawGame(st,s){
 }
 
 function openDeck(L){
-  DK.slides=buildDeck(L);DK.i=0;DK.step=0;DK.L=L;
+  DK.slides=buildDeck(L);DK.i=0;DK.step=0;DK.L=L;INK.store={};INK.undo=[];if(INK.board)inkBoard(false);
   try{DK.theme=localStorage.getItem("hsk-theme-"+L.n)||L.theme}catch(e){DK.theme=L.theme}
   $("#dTheme").innerHTML=THEMES.map(t=>`<option value="${t[0]}" ${t[0]===DK.theme?"selected":""}>🎨 ${t[1]}${t[0]===L.theme?" (mặc định)":""}</option>`).join("");
   const d=$("#deck");d.hidden=false;document.body.style.overflow="hidden";
   try{d.requestFullscreen&&d.requestFullscreen().catch(()=>{})}catch(e){}
   drawDeck(true);fitDeck();
 }
-function closeDeck(){$("#deck").hidden=true;document.body.style.overflow="";try{if(document.fullscreenElement)document.exitFullscreen().catch(()=>{})}catch(e){};try{speechSynthesis.cancel()}catch(e){}}
+function closeDeck(){if(INK.on)inkMode(false);if(INK.board)inkBoard(false);$("#deck").hidden=true;document.body.style.overflow="";try{if(document.fullscreenElement)document.exitFullscreen().catch(()=>{})}catch(e){};try{speechSynthesis.cancel()}catch(e){}}
 function drawDeck(fresh){
   const s=DK.slides[DK.i];const st=$("#dStage");
   if(fresh){st.className="d-stage "+s.cls+" theme-"+(DK.theme||DK.L.theme||"red");st.innerHTML=s.html;st.classList.remove("in");void st.offsetWidth;st.classList.add("in")}
@@ -1378,6 +1397,7 @@ function drawDeck(fresh){
   const bl=st.querySelector("[data-blurlv]");if(bl)bl.style.filter=`blur(${[26,14,5,0][Math.min(DK.step,3)]}px)`;
   if(s.nowriter&&!fresh&&DK.step===1)deckWriter(st,s,true);
   if(fresh)fitSlide(st);
+  if(fresh)setTimeout(inkRedraw,0);
   if(s.word&&fresh&&!s.nowriter)deckWriter(st,s);
   if(s.listen&&fresh&&DK.auto)setTimeout(()=>speak(s.listen[0]),500);
   $("#dCount").textContent=`${DK.i+1} / ${DK.slides.length}`;
@@ -1399,7 +1419,7 @@ function deckNext(){const s=DK.slides[DK.i];
   if(DK.step<s.steps){DK.step++;drawDeck(false);if(s.match&&DK.auto){const m=DK.L.match[DK.step-1];speak(m[0]+m[1])}}
   else if(DK.i<DK.slides.length-1){DK.i++;DK.step=0;drawDeck(true)}}
 function deckPrev(){if(DK.step>0){DK.step--;drawDeck(false)}else if(DK.i>0){DK.i--;DK.step=DK.slides[DK.i].steps;drawDeck(true)}}
-function fitDeck(){const st=$("#dStage");if(!st||$("#deck").hidden)return;const W=window.innerWidth,H=window.innerHeight-56;const k=Math.min(W/1280,H/720);st.style.transform=`translate(-50%,-50%) scale(${k})`}
+function fitDeck(){const st=$("#dStage");if(!st||$("#deck").hidden)return;const W=window.innerWidth,H=window.innerHeight-56;const k=Math.min(W/1280,H/720);st.style.transform=`translate(-50%,-50%) scale(${k})`;const b=$("#dBoard");if(b)b.style.transform=st.style.transform;setTimeout(inkResize,0)}
 window.addEventListener("resize",()=>{fitDeck();if(!$("#deck").hidden&&DK.slides[DK.i].match)drawLines($("#dStage"),DK.slides[DK.i])});
 document.addEventListener("keydown",e=>{if($("#deck").hidden)return;if(e.target&&e.target.tagName==="SELECT")return;
   if(!$("#dWrite").hidden){if(e.key==="Escape"){$("#dWrite").hidden=true}return}
@@ -1457,6 +1477,84 @@ paintThemeBtn();
 
 document.addEventListener("change",e=>{if(e.target.id!=="dTheme")return;DK.theme=e.target.value;try{localStorage.setItem("hsk-theme-"+DK.L.n,DK.theme)}catch(er){}
   const st=$("#dStage");st.className=st.className.replace(/theme-\w+/,"theme-"+DK.theme);e.target.blur()});
+/* ===== VIẾT / VẼ TRÊN SLIDE ===== */
+const INK={on:false,tool:"pen",color:"#ff3b30",size:2,board:false,grid:true,store:{},cur:null,undo:[]};
+const INK_COLORS=["#ff3b30","#ffd60a","#1e88e5","#00a86b","#111111","#ffffff"];
+const INK_SIZES=[3,6,11];
+function inkKey(){return INK.board?"board":"s"+DK.i}
+function inkList(){const k=inkKey();return INK.store[k]||(INK.store[k]=[])}
+function inkCanvas(){return $("#dInk")}
+function stageRect(){return (INK.board?$("#dBoard"):$("#dStage")).getBoundingClientRect()}
+function inkResize(){const c=inkCanvas();if(!c)return;const r=c.getBoundingClientRect(),d=window.devicePixelRatio||1;c.width=Math.round(r.width*d);c.height=Math.round(r.height*d);inkRedraw()}
+function inkTransform(ctx){const c=inkCanvas(),cr=c.getBoundingClientRect(),r=stageRect(),d=window.devicePixelRatio||1,k=r.width/1280;ctx.setTransform(d*k,0,0,d*k,d*(r.left-cr.left),d*(r.top-cr.top))}
+function drawStroke(ctx,s){
+  const p=s.pts;if(!p.length)return;
+  ctx.save();ctx.lineCap="round";ctx.lineJoin="round";ctx.strokeStyle=s.color;ctx.fillStyle=s.color;
+  if(s.tool==="hl"){ctx.globalAlpha=.35;ctx.lineWidth=s.w;ctx.beginPath();ctx.moveTo(p[0][0],p[0][1]);for(let i=1;i<p.length;i++)ctx.lineTo(p[i][0],p[i][1]);ctx.stroke();ctx.restore();return}
+  if(p.length===1){ctx.beginPath();ctx.arc(p[0][0],p[0][1],s.w*(.5+p[0][2])/2,0,7);ctx.fill();ctx.restore();return}
+  for(let i=1;i<p.length;i++){const a=p[i-1],b=p[i];ctx.lineWidth=s.w*(.45+(a[2]+b[2])/2*1.1);ctx.beginPath();ctx.moveTo(a[0],a[1]);ctx.lineTo(b[0],b[1]);ctx.stroke()}
+  ctx.restore();
+}
+function inkRedraw(){const c=inkCanvas();if(!c)return;const ctx=c.getContext("2d");ctx.setTransform(1,0,0,1,0,0);ctx.clearRect(0,0,c.width,c.height);
+  if(!DK.slides.length)return;inkTransform(ctx);inkList().forEach(s=>drawStroke(ctx,s));if(INK.cur)drawStroke(ctx,INK.cur)}
+function toStage(e){const r=stageRect();return [(e.clientX-r.left)/r.width*1280,(e.clientY-r.top)/r.height*720,e.pointerType==="pen"?(e.pressure||.5):.5]}
+function inkErase(pt){const L=inkList();const before=L.length;for(let i=L.length-1;i>=0;i--){if(L[i].pts.some(q=>Math.hypot(q[0]-pt[0],q[1]-pt[1])<18)){INK.undo.push({k:inkKey(),s:L[i],del:true});L.splice(i,1)}}if(L.length!==before)inkRedraw()}
+function inkSetup(){
+  const c=inkCanvas();
+  c.addEventListener("pointerdown",e=>{if(!INK.on)return;e.preventDefault();c.setPointerCapture(e.pointerId);const pt=toStage(e);
+    if(INK.tool==="eraser"){INK.erasing=true;inkErase(pt);return}
+    INK.cur={tool:INK.tool,color:INK.tool==="hl"?"#ffe14d":INK.color,w:INK.tool==="hl"?26:INK_SIZES[INK.size],pts:[pt]};inkRedraw()});
+  c.addEventListener("pointermove",e=>{if(!INK.on)return;
+    if(INK.erasing){inkErase(toStage(e));return}
+    if(!INK.cur)return;const evs=e.getCoalescedEvents?e.getCoalescedEvents():[e];evs.forEach(ev=>INK.cur.pts.push(toStage(ev)));inkRedraw()});
+  const end=()=>{INK.erasing=false;if(INK.cur){inkList().push(INK.cur);INK.undo.push({k:inkKey(),s:INK.cur});INK.cur=null;inkRedraw()}};
+  c.addEventListener("pointerup",end);c.addEventListener("pointercancel",end);
+  window.addEventListener("resize",inkResize);document.addEventListener("fullscreenchange",()=>setTimeout(inkResize,100));
+}
+function inkToolbar(){
+  const t=$("#dTools");
+  t.innerHTML=`
+   <button data-it="pen" class="${INK.tool==="pen"?"on":""}" title="Bút (P)">✏️</button>
+   <button data-it="hl" class="${INK.tool==="hl"?"on":""}" title="Bút dạ quang (H)">🖍️</button>
+   <button data-it="eraser" class="${INK.tool==="eraser"?"on":""}" title="Tẩy (E)">🧽</button>
+   <div class="d-tsep"></div>
+   ${INK_COLORS.map(c=>`<button data-ic="${c}" class="sw ${INK.color===c&&INK.tool==="pen"?"on":""}" style="--sw:${c}" title="Màu"></button>`).join("")}
+   <div class="d-tsep"></div>
+   ${INK_SIZES.map((s,i)=>`<button data-is="${i}" class="${INK.size===i?"on":""}" title="Cỡ nét"><i style="width:${s+2}px;height:${s+2}px"></i></button>`).join("")}
+   <div class="d-tsep"></div>
+   <button data-ia="undo" title="Hoàn tác (Z)">↶</button>
+   <button data-ia="clear" title="Xoá hết nét trên trang này (C)">🗑️</button>
+   <button data-ia="board" class="${INK.board?"on":""}" title="Bảng trắng (W)">⬜</button>
+   ${INK.board?`<button data-ia="grid" class="${INK.grid?"on":""}" title="Lưới 田字格">田</button>`:""}
+   <button data-ia="off" title="Tắt bút, quay lại bấm slide (Esc)">✋</button>`;
+}
+function inkMode(on){INK.on=on;$("#deck").classList.toggle("inking",on);$("#dTools").hidden=!on;$("#dPen").classList.toggle("on",on);$("#dPen").textContent=on?"✏️ Đang viết":"✏️ Viết (P)";if(on){inkToolbar();inkResize()}}
+function inkBoard(on){INK.board=on;const b=$("#dBoard");b.hidden=!on;b.classList.toggle("grid",INK.grid);fitDeck();inkToolbar();inkRedraw()}
+document.addEventListener("click",e=>{
+  if(e.target.closest("#dPen")){inkMode(!INK.on);return}
+  const t=e.target.closest("#dTools button");if(!t)return;
+  if(t.dataset.it){INK.tool=t.dataset.it;inkToolbar();return}
+  if(t.dataset.ic){INK.color=t.dataset.ic;INK.tool="pen";inkToolbar();return}
+  if(t.dataset.is){INK.size=+t.dataset.is;if(INK.tool==="eraser")INK.tool="pen";inkToolbar();return}
+  const a=t.dataset.ia;
+  if(a==="undo"){const u=INK.undo.pop();if(u){const L=INK.store[u.k]||(INK.store[u.k]=[]);if(u.del)L.push(u.s);else{const i=L.lastIndexOf(u.s);if(i>=0)L.splice(i,1)}inkRedraw()}}
+  if(a==="clear"){INK.store[inkKey()]=[];inkRedraw()}
+  if(a==="board")inkBoard(!INK.board);
+  if(a==="grid"){INK.grid=!INK.grid;$("#dBoard").classList.toggle("grid",INK.grid);inkToolbar()}
+  if(a==="off")inkMode(false);
+});
+document.addEventListener("keydown",e=>{
+  if($("#deck").hidden||e.target.tagName==="SELECT")return;if(e.ctrlKey||e.metaKey||e.altKey)return;
+  const k=e.key.toLowerCase();
+  if(k==="p"){inkMode(!INK.on||INK.tool!=="pen");INK.tool="pen";INK.on&&inkToolbar();e.stopImmediatePropagation();return}
+  if(!INK.on)return;
+  if(k==="h"){INK.tool="hl";inkToolbar()}else if(k==="e"){INK.tool="eraser";inkToolbar()}
+  else if(k==="z"){$("#dTools [data-ia=undo]").click()}else if(k==="c"){$("#dTools [data-ia=clear]").click()}
+  else if(k==="w"){inkBoard(!INK.board)}
+  else if(e.key==="Escape"){inkMode(false);e.stopImmediatePropagation()}
+},true);
+
+inkSetup();
 route();
 </script>
 
