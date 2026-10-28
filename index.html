@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Lớp HSK cô Chanie</title>
 <meta name="claude:viewport-fit-sides" content="cover">
+<script>try{var t=localStorage.getItem("hsk-theme");if(t==="dark"||t==="light")document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=Noto+Sans:wght@400;500&family=Noto+Serif+SC:wght@500;700&display=swap">
@@ -366,6 +367,11 @@ body.present .grid-han.sm{width:120px}
 .d-dq .d-dzh{font-size:28px}
 .d-mcol:last-child{width:330px}
 .d-mwrap{width:820px}
+
+.theme-btn{width:38px;height:38px;flex:none;border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:10px;display:grid;place-items:center;transition:background .2s,color .2s}
+.theme-btn:hover{background:var(--jade-soft);color:var(--jade)}
+.theme-btn svg{width:18px;height:18px}
+body,.top,.lesson,.level-card,.vcard,.stage{transition:background-color .25s,color .25s,border-color .25s}
 footer{border-top:1px solid var(--line);color:var(--muted);font-size:14px}
 footer .wrap{padding-block:20px}
 
@@ -395,6 +401,7 @@ footer .wrap{padding-block:20px}
       <a href="#lop-hoc" data-view="lop-hoc">Bài học trên lớp</a>
       <a href="#on-luyen" data-view="on-luyen">Ôn luyện</a>
     </nav>
+    <button id="themeBtn" class="theme-btn" aria-label="Chuyển giao diện sáng / tối" title="Chuyển giao diện sáng / tối"></button>
   </div>
 </header>
 
@@ -1287,6 +1294,14 @@ document.addEventListener("click",e=>{
   if(e.target.closest("#dStage")&&!$("#deck").hidden){const sp=e.target.closest("[data-speak].shown");if(sp){speak(sp.dataset.speak);return}deckNext()}
   if(e.target.closest("#lopDeck")){openDeck(COURSE.lessons.find(l=>l.n===lopLesson))}
 });
+
+/* ===== CHUYỂN SÁNG / TỐI ===== */
+const ICON_SUN='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>',ICON_MOON='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>';
+function effTheme(){const t=document.documentElement.getAttribute("data-theme");if(t==="dark"||t==="light")return t;try{return matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light"}catch(e){return "light"}}
+function paintThemeBtn(){const b=$("#themeBtn");if(!b)return;const d=effTheme()==="dark";b.innerHTML=d?ICON_SUN:ICON_MOON;b.setAttribute("aria-label",d?"Chuyển sang giao diện sáng":"Chuyển sang giao diện tối");b.title=b.getAttribute("aria-label")}
+$("#themeBtn").addEventListener("click",()=>{const next=effTheme()==="dark"?"light":"dark";document.documentElement.setAttribute("data-theme",next);try{localStorage.setItem("hsk-theme",next)}catch(e){}paintThemeBtn()});
+try{matchMedia("(prefers-color-scheme: dark)").addEventListener("change",paintThemeBtn)}catch(e){}
+paintThemeBtn();
 
 route();
 </script>
