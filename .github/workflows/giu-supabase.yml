@@ -1,0 +1,16 @@
+# Giữ cho Supabase (tài khoản học viên) không bị tạm dừng do 7 ngày không hoạt động.
+# Chạy tự động mỗi ngày lúc 9h sáng (giờ Việt Nam). Chỉ dùng khoá công khai (publishable key).
+name: Giu Supabase hoat dong
+on:
+  schedule:
+    - cron: "7 2 * * *"
+  workflow_dispatch:
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Goi Supabase
+        run: |
+          curl -sS -f -X POST "https://ipyrukdykyhlbdkgpqus.supabase.co/rest/v1/rpc/has_teacher" \
+            -H "apikey: sb_publishable_D_0KivVjOQW7gKTVTOlqVA_rcoDwGdW" \
+            -H "Content-Type: application/json" -d '{}'
